@@ -56,7 +56,7 @@
 // })
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config()
 const app = express();
 const port = process.env.PORT || 5000;
@@ -89,13 +89,34 @@ async function run() {
     const productCollection = client.db('emaJohnDB').collection('products');
 
     app.get('/products', async (req, res) => {
-      const result = await productCollection.find().toArray();
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+
+
+      console.log('pagination query:', page, size);
+      const result = await productCollection.find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
-    
-    app.get('/productsCount',async(req,res)=>{
+
+    app.post('/productByIds', async (req, res) => {
+      const ids = req.body;
+      console.log(ids);
+      const idsWithObjectId = ids.map(id => new ObjectId(id));
+      const query = {
+        _id:{
+          $in:idsWithObjectId
+        }
+      }
+      const result = await productCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    app.get('/productsCount', async (req, res) => {
       const count = await productCollection.estimatedDocumentCount();
-      res.send({count});
+      res.send({ count });
     })
 
     // Send a ping to confirm a successful connection
